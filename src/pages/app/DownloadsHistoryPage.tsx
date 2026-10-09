@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { formatBytes, formatTimeRemaining } from '../../lib/utils';
-import { DownloadQualityModal } from '../../components/common/DownloadQualityModal';
+import { formatBytes, formatTimeRemaining, downloadImage } from '../../lib/utils';
 import { Download, Trash2, Clock, ShieldCheck, Search } from 'lucide-react';
 
 export const DownloadsHistoryPage: React.FC = () => {
   const { history, removeFromHistory } = useWorkspaceStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [qualityModalOpen, setQualityModalOpen] = useState(false);
-  const [qualityDownload, setQualityDownload] = useState<{ url: string; filename: string } | null>(null);
 
   const filtered = history.filter((item) =>
     item.original_filename.toLowerCase().includes(searchTerm.toLowerCase())
@@ -101,13 +98,7 @@ export const DownloadsHistoryPage: React.FC = () => {
 
                 <div className="flex items-center gap-2 pt-2 border-t border-white/5">
                   <button
-                    onClick={() => {
-                      setQualityDownload({
-                        url: item.processed_url || item.original_url,
-                        filename: item.original_filename,
-                      });
-                      setQualityModalOpen(true);
-                    }}
+                    onClick={() => downloadImage(item.processed_url || item.original_url, item.original_filename)}
                     className="btn-gradient-primary flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -128,16 +119,6 @@ export const DownloadsHistoryPage: React.FC = () => {
           ))}
         </div>
       )}
-
-      <DownloadQualityModal
-        isOpen={qualityModalOpen}
-        onClose={() => {
-          setQualityModalOpen(false);
-          setQualityDownload(null);
-        }}
-        imageUrl={qualityDownload?.url || null}
-        baseFilename={qualityDownload?.filename}
-      />
 
     </div>
   );

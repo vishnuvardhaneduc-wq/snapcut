@@ -2,10 +2,9 @@ import React, { useState, useRef } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useAuthStore } from '../../store/authStore';
 import { validateImageFile, processBackgroundRemoval } from '../../lib/backgroundRemover';
-import { formatBytes } from '../../lib/utils';
+import { downloadImage, formatBytes } from '../../lib/utils';
 import { ImageComparisonSlider } from '../../components/common/ImageComparisonSlider';
 import { PaymentModal } from '../../components/common/PaymentModal';
-import { DownloadQualityModal } from '../../components/common/DownloadQualityModal';
 import confetti from 'canvas-confetti';
 import {
   Upload,
@@ -14,8 +13,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Palette,
-  RefreshCw,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 
 export const UploadWorkspacePage: React.FC = () => {
@@ -47,7 +45,6 @@ export const UploadWorkspacePage: React.FC = () => {
 
   const [dragActive, setDragActive] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [qualityModalOpen, setQualityModalOpen] = useState(false);
 
   const handleFileSelected = async (selectedFile: File) => {
     // 1. Validation
@@ -180,7 +177,7 @@ export const UploadWorkspacePage: React.FC = () => {
 
           {processedUrl && (
             <button
-              onClick={() => setQualityModalOpen(true)}
+              onClick={() => downloadImage(processedUrl, `snapcut-${filename || 'cutout'}.png`)}
               className="btn-gradient-primary px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg"
             >
               <Download className="w-4 h-4" />
@@ -349,32 +346,6 @@ export const UploadWorkspacePage: React.FC = () => {
                   </button>
                 </div>
               </div>
-            ) : status === 'idle' && originalUrl && !processedUrl ? (
-              // Idle State: File loaded, waiting for user to click Remove Background
-              <div className="w-full aspect-[4/3] sm:aspect-[16/10] max-h-[560px] rounded-3xl bg-[#0D111A] border border-cyan-500/30 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden shadow-[0_0_50px_rgba(0,242,254,0.15)]">
-                <div className="relative w-full h-full max-h-[400px] rounded-2xl overflow-hidden border border-white/10 mb-6">
-                  <img
-                    src={originalUrl}
-                    alt={filename || 'Uploaded image'}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-
-                <h3 className="text-xl font-bold text-white font-['Outfit'] mb-2">
-                  Image Ready for Background Removal
-                </h3>
-                <p className="text-xs text-slate-400 mb-6 max-w-sm">
-                  Click the button below to start AI background removal processing.
-                </p>
-
-                <button
-                  onClick={handleRetry}
-                  className="btn-gradient-primary px-8 py-3.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg animate-pulse-glow"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  <span>Remove Background Now</span>
-                </button>
-              </div>
             ) : (
               // Success / Interactive Slider
               <div className="space-y-4">
@@ -513,7 +484,7 @@ export const UploadWorkspacePage: React.FC = () => {
             {processedUrl && (
               <div className="p-5 rounded-2xl bg-[#0D111A] border border-cyan-500/30 space-y-3">
                 <button
-                  onClick={() => setQualityModalOpen(true)}
+                  onClick={() => downloadImage(processedUrl, `snapcut-${filename || 'cutout'}.png`)}
                   className="btn-gradient-primary w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
@@ -539,14 +510,6 @@ export const UploadWorkspacePage: React.FC = () => {
       <PaymentModal
         isOpen={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
-      />
-
-      {/* Download Quality Modal */}
-      <DownloadQualityModal
-        isOpen={qualityModalOpen}
-        onClose={() => setQualityModalOpen(false)}
-        imageUrl={processedUrl}
-        baseFilename={`snapcut-${filename || 'cutout'}`}
       />
 
     </div>

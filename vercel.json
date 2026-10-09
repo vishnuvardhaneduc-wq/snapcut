@@ -2,19 +2,8 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon\\.svg|icons\\.svg|logo\\.svg).*)",
+      "source": "/((?!assets/).*)",
       "destination": "/index.html"
-    },
-    {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/index.html",
-      "destination": "/",
-      "permanent": true
     }
   ],
   "headers": [

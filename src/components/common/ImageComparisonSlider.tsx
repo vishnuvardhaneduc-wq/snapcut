@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { BackdropMode } from '../../store/workspaceStore';
-import { ensureUrlHttps } from '../../lib/utils';
 import { Sparkles, MoveHorizontal, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 interface ImageComparisonSliderProps {
@@ -20,8 +19,6 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
   initialPosition = 50,
   className = '',
 }) => {
-  const safeOriginalUrl = ensureUrlHttps(originalUrl);
-  const safeProcessedUrl = ensureUrlHttps(processedUrl);
   const [sliderPos, setSliderPos] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -97,7 +94,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
           style={backdropMode === 'custom' ? { backgroundColor: customColor } : undefined}
         >
           <img
-            src={safeProcessedUrl}
+            src={processedUrl}
             alt="SnapCut Processed Cutout"
             className="w-full h-full object-contain pointer-events-none transition-transform duration-100"
             style={{ transform: `scale(${zoom})` }}
@@ -114,7 +111,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
           style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
         >
           <img
-            src={safeOriginalUrl}
+            src={originalUrl}
             alt="Original Upload"
             className="w-full h-full object-contain pointer-events-none transition-transform duration-100"
             style={{ transform: `scale(${zoom})` }}

@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
-import { formatBytes, formatTimeRemaining } from '../../lib/utils';
+import { formatBytes, formatTimeRemaining, downloadImage } from '../../lib/utils';
 import { PaymentModal } from '../../components/common/PaymentModal';
-import { DownloadQualityModal } from '../../components/common/DownloadQualityModal';
 import {
   Sparkles,
   Upload,
@@ -22,8 +21,6 @@ export const DashboardPage: React.FC = () => {
   const { user, credits } = useAuthStore();
   const { history } = useWorkspaceStore();
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [qualityModalOpen, setQualityModalOpen] = useState(false);
-  const [qualityDownload, setQualityDownload] = useState<{ url: string; filename: string } | null>(null);
 
   const totalQuota = credits.daily_free_remaining + credits.balance;
 
@@ -200,13 +197,7 @@ export const DashboardPage: React.FC = () => {
                   </td>
                   <td className="py-3 text-right">
                     <button
-                      onClick={() => {
-                        setQualityDownload({
-                          url: item.processed_url || item.original_url,
-                          filename: item.original_filename,
-                        });
-                        setQualityModalOpen(true);
-                      }}
+                      onClick={() => downloadImage(item.processed_url || item.original_url, item.original_filename)}
                       className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-medium inline-flex items-center gap-1.5 transition"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -223,16 +214,6 @@ export const DashboardPage: React.FC = () => {
       <PaymentModal
         isOpen={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
-      />
-
-      <DownloadQualityModal
-        isOpen={qualityModalOpen}
-        onClose={() => {
-          setQualityModalOpen(false);
-          setQualityDownload(null);
-        }}
-        imageUrl={qualityDownload?.url || null}
-        baseFilename={qualityDownload?.filename}
       />
 
     </div>

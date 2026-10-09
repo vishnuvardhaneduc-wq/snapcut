@@ -1,82 +1,9 @@
-import { ensureUrlHttps } from './utils';
-
-const WEBHOOK_URL = 'https://vishnuvardhan28.app.n8n.cloud/webhook/43263dd7-d725-4068-acea-90140df5ef15';
-
 export interface RemovalOptions {
   file: File;
   imageUrl: string;
   uploadId?: string;
   userId?: string;
   onProgress?: (progress: number, step: string) => void;
-}
-
-export interface WebhookResponse {
-  url: string;
-}
-
-export async function sendImageToWebhook(file: File, onProgress?: (progress: number, step: string) => void): Promise<string> {
-  onProgress?.(20, 'Uploading image to AI processor...');
-  const arrayBuffer = await file.arrayBuffer();
-
-  const response = await fetch(WEBHOOK_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': file.type || 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(file.name)}"`,
-      'X-File-Name': encodeURIComponent(file.name),
-      'X-File-Size': String(file.size),
-      'X-File-Type': file.type || 'application/octet-stream',
-    },
-    body: arrayBuffer,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Webhook returned status ${response.status}`);
-  }
-
-  onProgress?.(75, 'Receiving AI-processed result...');
-
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    const data: WebhookResponse = await response.json();
-    if (!data.url) {
-      throw new Error('Webhook response missing "url" field');
-    }
-    return ensureUrlHttps(data.url);
-  }
-
-  const text = await response.text();
-  try {
-    const data: WebhookResponse = JSON.parse(text);
-    if (!data.url) {
-      throw new Error('Webhook response missing "url" field');
-    }
-    return ensureUrlHttps(data.url);
-  } catch {
-    throw new Error('Webhook response was not valid JSON with url field');
-  }
-}
-
-async function getImageDimensions(src: string): Promise<{ width: number; height: number }> {
-  const safeSrc = ensureUrlHttps(src);
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
-    };
-    img.onerror = () => resolve({ width: 1920, height: 1080 });
-    img.src = safeSrc;
-  });
-}
-
-async function estimateUrlBytes(url: string): Promise<number> {
-  try {
-    const res = await fetch(ensureUrlHttps(url), { method: 'HEAD' });
-    const cl = res.headers.get('content-length');
-    if (cl) return parseInt(cl, 10);
-  } catch {}
-  return 1000000;
 }
 
 export interface RemovalResult {
@@ -226,49 +153,24 @@ export async function removeBackgroundLocal(
 }
 
 /**
- * Background Removal Processor
- * Sends the image to the n8n webhook for AI processing and awaits the
- * JSON response containing the processed image URL ({ "url": "..." }).
- * Falls back to local canvas segmenter if webhook is unavailable.
+ * Frontend Mock / Demo Background Removal Processor
+ * Runs a simulated segmentation pipeline with progressive visual feedback
+ * and client-side canvas cutout rendering without external network dependencies.
  */
 export async function processBackgroundRemoval(options: RemovalOptions): Promise<RemovalResult> {
   const { file, imageUrl, onProgress } = options;
   const startTime = performance.now();
 
-  if (file) {
-    try {
-      onProgress?.(10, 'Uploading image to n8n AI processor...');
-      const processedUrl = await sendImageToWebhook(file, onProgress);
-
-      onProgress?.(85, 'Loading processed image metadata...');
-      const [{ width, height }, bytes] = await Promise.all([
-        getImageDimensions(processedUrl),
-        estimateUrlBytes(processedUrl),
-      ]);
-
-      onProgress?.(100, 'Completed!');
-      return {
-        processedUrl,
-        processingTimeMs: Math.round(performance.now() - startTime),
-        width,
-        height,
-        fileSizeBytes: bytes,
-      };
-    } catch (webhookErr: any) {
-      console.warn('Webhook processing failed, falling back to local processor:', webhookErr.message);
-      onProgress?.(20, 'Falling back to local AI processor...');
-    }
-  }
-
   onProgress?.(20, 'Preparing image in local memory buffer...');
   await new Promise((r) => setTimeout(r, 250));
 
-  onProgress?.(45, 'Detecting subject contours (Local Mode)...');
+  onProgress?.(45, 'Detecting subject contours (Demo Mode)...');
   await new Promise((r) => setTimeout(r, 300));
 
   onProgress?.(70, 'Generating transparent alpha cutout...');
   await new Promise((r) => setTimeout(r, 250));
 
+  // Generate transparent cutout using local canvas segmenter
   const result = await removeBackgroundLocal(file || imageUrl, onProgress);
 
   return {
