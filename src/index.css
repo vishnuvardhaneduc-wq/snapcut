@@ -1,0 +1,115 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@layer base {
+  * {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  body {
+    background-color: #07090e;
+    color: #f8fafc;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(0, 242, 254, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 100% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 40%),
+      radial-gradient(circle at 0% 80%, rgba(0, 242, 254, 0.05) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+  }
+  
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom transparent background checkerboard */
+.checkerboard-pattern {
+  background-color: #0d111a;
+  background-image: 
+    linear-gradient(45deg, #151b28 25%, transparent 25%), 
+    linear-gradient(-45deg, #151b28 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #151b28 75%), 
+    linear-gradient(-45deg, transparent 75%, #151b28 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.checkerboard-pattern-light {
+  background-color: #f1f5f9;
+  background-image: 
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* Glassmorphism */
+.glass-panel {
+  background: rgba(13, 17, 26, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-glow {
+  background: rgba(13, 17, 26, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  box-shadow: 0 0 25px -5px rgba(0, 242, 254, 0.15);
+}
+
+/* Button Gradients */
+.btn-gradient-primary {
+  background: linear-gradient(135deg, #00f2fe 0%, #0284c7 100%);
+  color: #07090e;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px -3px rgba(0, 242, 254, 0.4);
+}
+
+.btn-gradient-primary:hover {
+  background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+  box-shadow: 0 0 25px 0px rgba(0, 242, 254, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-gradient-neon {
+  background: linear-gradient(135deg, #00f2fe 0%, #8b5cf6 100%);
+  color: #ffffff;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px -3px rgba(139, 92, 246, 0.4);
+}
+
+.btn-gradient-neon:hover {
+  background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+  box-shadow: 0 0 25px 0px rgba(139, 92, 246, 0.65);
+  transform: translateY(-1px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07090e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00f2fe;
+}
