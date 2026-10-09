@@ -1,3 +1,5 @@
+import { ensureUrlHttps } from './utils';
+
 const WEBHOOK_URL = 'https://vishnuvardhan28.app.n8n.cloud/webhook/43263dd7-d725-4068-acea-90140df5ef15';
 
 export interface RemovalOptions {
@@ -40,7 +42,7 @@ export async function sendImageToWebhook(file: File, onProgress?: (progress: num
     if (!data.url) {
       throw new Error('Webhook response missing "url" field');
     }
-    return data.url;
+    return ensureUrlHttps(data.url);
   }
 
   const text = await response.text();
@@ -49,13 +51,14 @@ export async function sendImageToWebhook(file: File, onProgress?: (progress: num
     if (!data.url) {
       throw new Error('Webhook response missing "url" field');
     }
-    return data.url;
+    return ensureUrlHttps(data.url);
   } catch {
     throw new Error('Webhook response was not valid JSON with url field');
   }
 }
 
 async function getImageDimensions(src: string): Promise<{ width: number; height: number }> {
+  const safeSrc = ensureUrlHttps(src);
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -63,13 +66,13 @@ async function getImageDimensions(src: string): Promise<{ width: number; height:
       resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
     };
     img.onerror = () => resolve({ width: 1920, height: 1080 });
-    img.src = src;
+    img.src = safeSrc;
   });
 }
 
 async function estimateUrlBytes(url: string): Promise<number> {
   try {
-    const res = await fetch(url, { method: 'HEAD' });
+    const res = await fetch(ensureUrlHttps(url), { method: 'HEAD' });
     const cl = res.headers.get('content-length');
     if (cl) return parseInt(cl, 10);
   } catch {}

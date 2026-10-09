@@ -25,6 +25,12 @@ export function formatTimeRemaining(expiryDateString: string): string {
   return `${minutes}m left`;
 }
 
+export function ensureUrlHttps(url: string | undefined | null): string {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+  return url.replace(/^http:\/\//i, 'https://');
+}
+
 export type ImageFormat = 'png' | 'jpeg' | 'webp';
 
 export interface QualityOption {
@@ -86,12 +92,13 @@ export const DOWNLOAD_QUALITY_OPTIONS: QualityOption[] = [
 ];
 
 async function loadImageIntoCanvas(src: string): Promise<{ canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; width: number; height: number }> {
+  const safeSrc = ensureUrlHttps(src);
   const img = new Image();
   img.crossOrigin = 'anonymous';
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
     img.onerror = () => reject(new Error('Failed to load image for encoding'));
-    img.src = src;
+    img.src = safeSrc;
   });
 
   const width = img.naturalWidth || img.width;
@@ -154,8 +161,10 @@ export async function downloadImage(url: string, filename: string) {
     return;
   }
 
+  const safeUrl = ensureUrlHttps(url);
+
   try {
-    const response = await fetch(url, {
+    const response = await fetch(safeUrl, {
       method: 'GET',
       mode: 'cors',
       credentials: 'omit',
@@ -175,7 +184,7 @@ export async function downloadImage(url: string, filename: string) {
   } catch (err) {
     console.warn('Blob download failed, falling back to direct link:', err);
     const link = document.createElement('a');
-    link.href = url;
+    link.href = safeUrl;
     link.download = targetName;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';

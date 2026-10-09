@@ -3,6 +3,7 @@ import {
   DOWNLOAD_QUALITY_OPTIONS,
   encodeImageBlob,
   extensionForFormat,
+  ensureUrlHttps,
   type QualityOption,
 } from '../../lib/utils';
 import {
@@ -41,18 +42,19 @@ export const DownloadQualityModal: React.FC<DownloadQualityModalProps> = ({
 
   const handleDownload = async (option: QualityOption) => {
     if (!imageUrl || processingId) return;
+    const safeImageUrl = ensureUrlHttps(imageUrl);
     setProcessingId(option.id);
     try {
       let blob: Blob;
       if (option.id === 'png-original') {
-        const res = await fetch(imageUrl, { mode: 'cors', credentials: 'omit' });
+        const res = await fetch(safeImageUrl, { mode: 'cors', credentials: 'omit' });
         if (res.ok) {
           blob = await res.blob();
         } else {
-          blob = await encodeImageBlob(imageUrl, 'png');
+          blob = await encodeImageBlob(safeImageUrl, 'png');
         }
       } else {
-        blob = await encodeImageBlob(imageUrl, option.format, option.quality);
+        blob = await encodeImageBlob(safeImageUrl, option.format, option.quality);
       }
 
       const cleanName = baseFilename.replace(/\.[^.]+$/, '');

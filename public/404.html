@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapCut — AI Background Remover</title>
+    <script>
+      (function () {
+        // SPA 404 fallback: redirect to the same URL path so React Router can handle it.
+        // This is intentionally duplicated content from index.html on static hosts that
+        // serve 404.html when a path has no matching file.
+        var path = window.location.pathname + window.location.search + window.location.hash;
+        // Replace state to avoid adding an extra history entry, then navigate to root
+        // which will load index.html; we then restore the path via pushState.
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', '/#' + path);
+          window.location.replace('/');
+        } else {
+          window.location.replace('/#' + path);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run SnapCut.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

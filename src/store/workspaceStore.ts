@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { UploadItem } from '../types';
+import { ensureUrlHttps } from '../lib/utils';
 
 export type BackdropMode = 'transparent' | 'checkerboard-light' | 'white' | 'black' | 'cyberpunk-neon' | 'sunset' | 'custom';
 
@@ -130,7 +131,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   setProcessedResult: (result) => {
     const { originalUrl, filename, fileSizeBytes, history } = get();
-    
+    const safeProcessedUrl = ensureUrlHttps(result.url);
+    const safeOriginalUrl = ensureUrlHttps(originalUrl || result.url);
+
     const newItem: UploadItem = {
       id: `upl_${Date.now()}`,
       user_id: 'usr_current',
@@ -138,8 +141,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       file_size_bytes: result.bytes || fileSizeBytes || 1000000,
       width: result.width || 1920,
       height: result.height || 1080,
-      original_url: originalUrl || result.url,
-      processed_url: result.url,
+      original_url: safeOriginalUrl,
+      processed_url: safeProcessedUrl,
       status: 'completed',
       processing_time_ms: result.timeMs,
       source: 'web',
@@ -148,7 +151,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     };
 
     set({
-      processedUrl: result.url,
+      processedUrl: safeProcessedUrl,
       status: 'success',
       progress: 100,
       stepMessage: 'Done!',
@@ -174,7 +177,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   addToHistory: (item) => {
     set((state) => ({
-      history: [item, ...state.history],
+      history: [
+        {
+          ...item,
+          original_url: ensureUrlHttps(item.original_url),
+          processed_url: ensureUrlHttps(item.processed_url),
+        },
+        ...state.history,
+      ],
     }));
   },
 
