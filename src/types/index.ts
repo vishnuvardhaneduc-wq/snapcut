@@ -43,6 +43,7 @@ export interface UploadItem {
   error_message?: string;
   processing_time_ms?: number;
   source: 'web' | 'api';
+  cloudinary_public_id?: string;
   expires_at: string;
   created_at: string;
 }

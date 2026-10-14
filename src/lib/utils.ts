@@ -25,11 +25,31 @@ export function formatTimeRemaining(expiryDateString: string): string {
   return `${minutes}m left`;
 }
 
-export function downloadImage(url: string, filename: string) {
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename || 'snapcut-transparent.png';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+/**
+ * Downloads full-resolution transparent PNG via Blob URL
+ * Preserves lossless alpha transparency and proper file naming
+ */
+export async function downloadImage(url: string, filename: string): Promise<void> {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) throw new Error('Download failed');
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    const baseName = filename ? filename.replace(/\.[^/.]+$/, '') : 'snapcut-cutout';
+    link.download = `${baseName}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+  } catch {
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.download = filename || 'snapcut-cutout.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }

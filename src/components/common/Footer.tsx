@@ -38,10 +38,10 @@ export const Footer: React.FC = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-white tracking-wider font-['Outfit'] uppercase">Product</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/features" className="hover:text-cyan-400 transition">Features</Link></li>
-              <li><Link to="/pricing" className="hover:text-cyan-400 transition">Pricing Plans</Link></li>
-              <li><Link to="/app/upload" className="hover:text-cyan-400 transition">Web App</Link></li>
-              <li><Link to="/api-docs" className="hover:text-cyan-400 transition">Developer API</Link></li>
+              <li><Link to="/features" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Features</Link></li>
+              <li><Link to="/pricing" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Pricing Plans</Link></li>
+              <li><Link to="/app/upload" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Web App</Link></li>
+              <li><Link to="/api-docs" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Developer API</Link></li>
             </ul>
           </div>
 
@@ -49,10 +49,10 @@ export const Footer: React.FC = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-white tracking-wider font-['Outfit'] uppercase">Resources</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/blog" className="hover:text-cyan-400 transition">Blog & Tutorials</Link></li>
-              <li><Link to="/api-docs" className="hover:text-cyan-400 transition">API Documentation</Link></li>
-              <li><Link to="/about" className="hover:text-cyan-400 transition">About Us</Link></li>
-              <li><Link to="/contact" className="hover:text-cyan-400 transition">Support & Contact</Link></li>
+              <li><Link to="/blog" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Blog & Tutorials</Link></li>
+              <li><Link to="/api-docs" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">API Documentation</Link></li>
+              <li><Link to="/about" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">About Us</Link></li>
+              <li><Link to="/contact" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Support & Contact</Link></li>
             </ul>
           </div>
 
@@ -60,9 +60,10 @@ export const Footer: React.FC = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-white tracking-wider font-['Outfit'] uppercase">Legal & Security</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/privacy" className="hover:text-cyan-400 transition">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-cyan-400 transition">Terms of Service</Link></li>
-              <li><span className="text-slate-500 text-xs">GDPR Compliant</span></li>
+              <li><Link to="/privacy" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Privacy Policy</Link></li>
+              <li><Link to="/terms" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Terms of Service</Link></li>
+              <li><Link to="/refund" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Refund & Cancellation</Link></li>
+              <li><Link to="/shipping" onClick={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })} className="hover:text-cyan-400 transition">Shipping & Delivery</Link></li>
               <li><span className="text-slate-500 text-xs">Cloudinary 24h Lifecycle</span></li>
             </ul>
           </div>

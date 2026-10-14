@@ -1,7 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from '../../components/common/Navbar';
 import { Footer } from '../../components/common/Footer';
 import { Clock } from 'lucide-react';
+import { company } from '../../config/company';
 
 export const PrivacyPage: React.FC = () => {
   return (
@@ -16,10 +18,10 @@ export const PrivacyPage: React.FC = () => {
               Last Updated: October 2026
             </span>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-['Outfit'] mt-4">
-              Privacy Policy & Ephemeral Storage
+              Privacy Policy
             </h1>
             <p className="mt-3 text-slate-400 text-sm">
-              Your images belong to you. We do not permanently store, train public models on, or sell your uploaded photos.
+              This policy explains how {company.legalName} (trading as {company.tradeName}) collects, protects, and handles personal data on {company.website}.
             </p>
           </div>
 
@@ -28,7 +30,7 @@ export const PrivacyPage: React.FC = () => {
             <div>
               <h3 className="text-base font-bold text-white mb-1">24-Hour Automated Expiration Guarantee</h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                All uploaded input files and background-removed PNG outputs are stored strictly temporarily on encrypted Cloudinary storage and database nodes. Every asset is tagged with a 24-hour expiration TTL and permanently erased by automated cron routines.
+                All uploaded input files and background-removed PNG outputs are stored strictly temporarily for download. Every asset is tagged with a 24-hour expiration TTL and permanently erased by automated deletion routines. We do not sell or train public models on user images.
               </p>
             </div>
           </div>
@@ -37,7 +39,7 @@ export const PrivacyPage: React.FC = () => {
             <div>
               <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">1. Information We Collect</h2>
               <p>
-                When you create an account on SnapCut AI, we collect your email address, full name, and billing details processed securely via Razorpay. We do not store full credit card numbers on our servers.
+                When you create an account on {company.tradeName}, we collect your email address, full name, and billing details processed securely via Razorpay. We do not store credit card numbers, CVVs, or bank credentials on our servers.
               </p>
             </div>
 
@@ -49,16 +51,34 @@ export const PrivacyPage: React.FC = () => {
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">3. Database Security & Row Level Security (RLS)</h2>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">3. Payment Information & Razorpay</h2>
               <p>
-                Our PostgreSQL infrastructure is powered by Supabase with Row Level Security (RLS) actively enabled across all metadata tables. Users can strictly only view, query, and manage their own uploads and API credentials.
+                Payments are processed through Razorpay's PCI-DSS Level 1 compliant gateway. Razorpay handles payment details (UPI, cards, netbanking) in accordance with its privacy standards.
               </p>
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">4. GDPR & Data Deletion Rights</h2>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">4. Your Rights & Data Deletion</h2>
               <p>
-                You may request immediate account closure or manual deletion of your account and metadata at any time from your Account Settings or by emailing privacy@snapcut.ai.
+                You may request immediate account closure or deletion of your account metadata at any time from your Account Settings or by emailing{' '}
+                <a className="text-cyan-400 hover:underline" href={`mailto:${company.email}`}>
+                  {company.email}
+                </a>
+                .
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">5. Contact Information</h2>
+              <p>
+                {company.legalName} ({company.tradeName})
+                <br />
+                Address: {company.address}
+                <br />
+                Email: {company.email} · Phone: {company.phone}
+                <br />
+                See also <Link to="/contact" className="text-cyan-400 hover:underline">Contact Us</Link> and{' '}
+                <Link to="/terms" className="text-cyan-400 hover:underline">Terms and Conditions</Link>.
               </p>
             </div>
           </div>
@@ -70,3 +90,4 @@ export const PrivacyPage: React.FC = () => {
     </div>
   );
 };
+

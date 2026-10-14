@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { useAuthStore } from '../../store/authStore';
 import { Sparkles, Menu, X, ArrowRight, ShieldAlert, LogOut } from 'lucide-react';
@@ -7,9 +7,23 @@ import { Sparkles, Menu, X, ArrowRight, ShieldAlert, LogOut } from 'lucide-react
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, credits, signOut, isAdmin } = useAuthStore();
 
   const isCurrent = (path: string) => location.pathname === path;
+
+  const scrollToTop = (targetPath?: string) => {
+    const isSamePage = targetPath && location.pathname === targetPath;
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: isSamePage ? 'smooth' : 'instant',
+    });
+    const scrollContainers = document.querySelectorAll<HTMLElement>('main, [data-scroll-container]');
+    scrollContainers.forEach((container) => {
+      container.scrollTo({ top: 0, left: 0, behavior: isSamePage ? 'smooth' : 'instant' });
+    });
+  };
 
   const navLinks = [
     { name: 'Features', path: '/features' },
@@ -33,6 +47,7 @@ export const Navbar: React.FC = () => {
             <Link
               key={link.name}
               to={link.path}
+              onClick={() => scrollToTop(link.path)}
               className={`text-sm font-medium transition-colors hover:text-cyan-400 ${
                 isCurrent(link.path) ? 'text-cyan-400 font-semibold drop-shadow-[0_0_8px_rgba(0,242,254,0.5)]' : 'text-slate-300'
               }`}
@@ -49,6 +64,7 @@ export const Navbar: React.FC = () => {
               {/* Daily Quota badge */}
               <Link
                 to="/app/credits"
+                onClick={() => scrollToTop('/app/credits')}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#131823] border border-cyan-500/30 text-xs font-medium text-slate-200 hover:border-cyan-400 transition"
               >
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
@@ -58,6 +74,7 @@ export const Navbar: React.FC = () => {
               {/* App Workspace Button */}
               <Link
                 to="/app/upload"
+                onClick={() => scrollToTop('/app/upload')}
                 className="btn-gradient-primary px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2"
               >
                 <Sparkles className="w-3.5 h-3.5" />
@@ -68,6 +85,7 @@ export const Navbar: React.FC = () => {
               {isAdmin && (
                 <Link
                   to="/admin/dashboard"
+                  onClick={() => scrollToTop('/admin/dashboard')}
                   className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 transition"
                   title="Admin Portal"
                 >
@@ -78,6 +96,7 @@ export const Navbar: React.FC = () => {
               {/* Dashboard / User Dropdown */}
               <Link
                 to="/app/dashboard"
+                onClick={() => scrollToTop('/app/dashboard')}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 text-xs font-medium text-slate-200 transition"
               >
                 <img
@@ -92,12 +111,14 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center gap-3">
               <Link
                 to="/login"
+                onClick={() => scrollToTop('/login')}
                 className="text-sm font-medium text-slate-300 hover:text-white px-3 py-2 transition"
               >
                 Log in
               </Link>
               <Link
                 to="/register"
+                onClick={() => scrollToTop('/register')}
                 className="btn-gradient-neon px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5"
               >
                 <span>Get Started Free</span>
@@ -124,7 +145,10 @@ export const Navbar: React.FC = () => {
               <Link
                 key={link.name}
                 to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  scrollToTop(link.path);
+                }}
                 className={`text-base font-medium py-1 ${
                   isCurrent(link.path) ? 'text-cyan-400' : 'text-slate-300'
                 }`}
@@ -139,7 +163,10 @@ export const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/app/upload"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    scrollToTop('/app/upload');
+                  }}
                   className="btn-gradient-primary w-full py-2.5 rounded-xl text-center text-sm font-semibold flex items-center justify-center gap-2"
                 >
                   <Sparkles className="w-4 h-4" />
@@ -147,15 +174,20 @@ export const Navbar: React.FC = () => {
                 </Link>
                 <Link
                   to="/app/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    scrollToTop('/app/dashboard');
+                  }}
                   className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-center text-sm font-medium text-slate-200"
                 >
                   User Dashboard
                 </Link>
                 <button
-                  onClick={() => {
-                    signOut();
+                  onClick={async () => {
+                    navigate('/', { replace: true });
+                    await signOut();
                     setMobileMenuOpen(false);
+                    scrollToTop('/');
                   }}
                   className="w-full py-2 text-xs text-rose-400 hover:text-rose-300 flex items-center justify-center gap-1.5"
                 >
@@ -167,14 +199,20 @@ export const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    scrollToTop('/login');
+                  }}
                   className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-center text-sm font-medium text-slate-200"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    scrollToTop('/register');
+                  }}
                   className="btn-gradient-neon w-full py-2.5 rounded-xl text-center text-sm font-semibold"
                 >
                   Get Started Free

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { Logo } from '../components/common/Logo';
 import { useAuthStore } from '../store/authStore';
@@ -25,8 +25,23 @@ export const AppLayout: React.FC = () => {
   const { user, credits, signOut, isAdmin } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
 
-  const isCurrent = (path: string) => location.pathname === path;
+  // Scroll to top whenever subroute in AppLayout changes
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      mainRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [location.pathname]);
+
+  const isCurrent = (path: string) => {
+    if (location.pathname === path) return true;
+    if (path === '/app/upload' && location.pathname === '/app/uploads') return true;
+    if (path === '/app/downloads' && location.pathname === '/app/download') return true;
+    return false;
+  };
 
   const navigation = [
     { name: 'Dashboard', path: '/app/dashboard', icon: LayoutDashboard },
@@ -129,7 +144,15 @@ export const AppLayout: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.path}
-                  onClick={() => setSidebarOpen(false)}
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    const isSame = isCurrent(item.path);
+                    if (mainRef.current) {
+                      mainRef.current.scrollTo({ top: 0, left: 0, behavior: isSame ? 'smooth' : 'instant' });
+                      mainRef.current.scrollTop = 0;
+                    }
+                    window.scrollTo({ top: 0, left: 0, behavior: isSame ? 'smooth' : 'instant' });
+                  }}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
                     active
                       ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-[0_0_15px_rgba(0,242,254,0.15)]'
@@ -159,9 +182,9 @@ export const AppLayout: React.FC = () => {
           )}
 
           <button
-            onClick={() => {
-              signOut();
-              navigate('/login');
+            onClick={async () => {
+              navigate('/', { replace: true });
+              await signOut();
             }}
             className="flex items-center gap-3 w-full px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition"
           >
@@ -173,7 +196,7 @@ export const AppLayout: React.FC = () => {
       </aside>
 
       {/* Main App Content Viewport */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <Outlet />
       </main>
 

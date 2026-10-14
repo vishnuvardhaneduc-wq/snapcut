@@ -1,6 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from '../../components/common/Navbar';
 import { Footer } from '../../components/common/Footer';
+import { company } from '../../config/company';
 
 export const TermsPage: React.FC = () => {
   return (
@@ -15,39 +17,60 @@ export const TermsPage: React.FC = () => {
               Effective Date: October 2026
             </span>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-white font-['Outfit'] mt-4">
-              Terms of Service
+              Terms and Conditions
             </h1>
             <p className="mt-3 text-slate-400 text-sm">
-              Please read these Terms of Service carefully before utilizing SnapCut AI.
+              These terms govern your use of {company.website} and the {company.tradeName} AI service provided by {company.legalName}.
             </p>
           </div>
 
           <div className="space-y-8 text-sm text-slate-300 leading-relaxed">
             <div>
-              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">1. Service Acceptance</h2>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">1. Agreement to Terms</h2>
               <p>
-                By registering an account, connecting an API key, or using SnapCut AI web interfaces, you agree to comply with these terms, our acceptable use policy, and applicable laws.
+                By registering an account, purchasing credits or subscriptions through Razorpay, or using the {company.tradeName} platform, you agree to these Terms, our{' '}
+                <Link to="/privacy" className="text-cyan-400 hover:underline">Privacy Policy</Link>,{' '}
+                <Link to="/refund" className="text-cyan-400 hover:underline">Refund and Cancellation Policy</Link>, and{' '}
+                <Link to="/shipping" className="text-cyan-400 hover:underline">Shipping and Delivery Policy</Link>.
               </p>
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">2. Acceptable Use Policy</h2>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">2. Service Description</h2>
               <p>
-                You may not upload, process, or distribute illegal content, non-consensual imagery, malicious payloads, or attempt to reverse-engineer proprietary edge models or rate limit restrictions.
+                {company.tradeName} is a software platform providing automated AI background removal and image processing. Services are delivered digitally with instant access upon account creation or payment.
               </p>
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">3. Subscriptions & Billing</h2>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">3. Acceptable Use Policy</h2>
               <p>
-                Subscriptions are billed on a recurring monthly cycle via Razorpay. You can cancel your subscription at any time within your billing dashboard. Unused pay-as-you-go credit packs do not expire.
+                You may not upload, process, or distribute illegal content, non-consensual imagery, malicious payloads, or attempt to reverse-engineer edge models or bypass rate limits.
               </p>
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">4. Limitation of Liability</h2>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">4. Payments & Razorpay Billing</h2>
               <p>
-                SnapCut AI is provided on an "as is" and "as available" basis without warranties of any kind. Under no circumstances will SnapCut AI be liable for indirect or consequential damages.
+                Prices are listed in INR. Payments are collected by Razorpay. Subscriptions renew monthly until cancelled. Credit packs are non-expiring. You can manage or cancel your subscription at any time in the app workspace.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">5. Governing Law & Jurisdiction</h2>
+              <p>
+                These terms shall be governed by and construed in accordance with the laws of India. Any disputes arising shall be subject to the exclusive jurisdiction of courts in Hyderabad, Telangana.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-white font-['Outfit'] mb-3">6. Contact Information</h2>
+              <p>
+                {company.legalName} ({company.tradeName})
+                <br />
+                {company.address}
+                <br />
+                Email: {company.email} · Phone: {company.phone}
               </p>
             </div>
           </div>
@@ -59,3 +82,4 @@ export const TermsPage: React.FC = () => {
     </div>
   );
 };
+

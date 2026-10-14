@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { Logo } from '../components/common/Logo';
 import { useAuthStore } from '../store/authStore';
@@ -19,6 +19,16 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const { user } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Scroll to top whenever subroute in AdminLayout changes
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      mainRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [location.pathname]);
 
   const isCurrent = (path: string) => location.pathname === path;
 
@@ -74,7 +84,15 @@ export const AdminLayout: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.path}
-                  onClick={() => setSidebarOpen(false)}
+                  onClick={() => {
+                    setSidebarOpen(false);
+                    const isSame = isCurrent(item.path);
+                    if (mainRef.current) {
+                      mainRef.current.scrollTo({ top: 0, left: 0, behavior: isSame ? 'smooth' : 'instant' });
+                      mainRef.current.scrollTop = 0;
+                    }
+                    window.scrollTo({ top: 0, left: 0, behavior: isSame ? 'smooth' : 'instant' });
+                  }}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition ${
                     active
                       ? 'bg-purple-500/20 text-purple-200 border border-purple-500/40 shadow-[0_0_15px_rgba(139,92,246,0.2)]'
@@ -92,6 +110,9 @@ export const AdminLayout: React.FC = () => {
         <div className="p-6 border-t border-white/5">
           <Link
             to="/app/dashboard"
+            onClick={() => {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            }}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-cyan-400 hover:bg-white/5 transition"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -101,7 +122,7 @@ export const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Admin Viewport */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <Outlet />
       </main>
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import { authService } from '../services/authService';
 import type { UserProfile, UserCredits, Subscription } from '../types';
 
@@ -8,51 +9,33 @@ interface AuthState {
   subscription: Subscription | null;
   isLoading: boolean;
   isAdmin: boolean;
-  
+
   // Actions
   setUser: (user: UserProfile | null) => void;
   setCredits: (credits: Partial<UserCredits>) => void;
-  deductCredit: () => boolean;
-  addCredits: (amount: number) => void;
-  upgradePlan: (plan: 'pro' | 'enterprise') => void;
+  deductCredit: () => Promise<boolean>;
+  addCredits: (amount: number) => Promise<void>;
+  upgradePlan: (plan: 'pro' | 'enterprise') => Promise<void>;
   initializeAuth: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
 
-// Default mock guest / initial state for smooth local experience
-const defaultUser: UserProfile = {
-  id: 'usr_demo_7829',
-  email: 'creator@snapcut.ai',
-  full_name: 'Alex Rivera',
-  role: 'user',
-  plan: 'free',
-  avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  created_at: new Date().toISOString(),
-};
-
-const defaultCredits: UserCredits = {
-  id: 'crd_1',
-  user_id: 'usr_demo_7829',
-  balance: 10,
+const initialCredits: UserCredits = {
+  id: '',
+  user_id: '',
+  balance: 0,
   daily_free_remaining: 5,
   last_daily_reset: new Date().toISOString().split('T')[0],
 };
 
-const defaultSub: Subscription = {
-  id: 'sub_1',
-  user_id: 'usr_demo_7829',
-  plan_id: 'free',
-  status: 'active',
-  current_period_start: new Date().toISOString(),
-  current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-};
+let authSubscriptionInitialized = false;
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: defaultUser,
-  credits: defaultCredits,
-  subscription: defaultSub,
-  isLoading: false,
+  user: null,
+  credits: initialCredits,
+  subscription: null,
+  isLoading: true,
   isAdmin: false,
 
   setUser: (user) => {
@@ -68,8 +51,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }));
   },
 
-  deductCredit: () => {
-    const { credits } = get();
+  deductCredit: async () => {
+    const { user, credits } = get();
+
     if (credits.daily_free_remaining > 0) {
       set({
         credits: {
@@ -77,6 +61,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           daily_free_remaining: credits.daily_free_remaining - 1,
         },
       });
+      if (user?.id) {
+        authService.deductCredit(user.id).catch(console.error);
+      }
       return true;
     } else if (credits.balance > 0) {
       set({
@@ -85,61 +72,161 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           balance: credits.balance - 1,
         },
       });
+      if (user?.id) {
+        authService.deductCredit(user.id).catch(console.error);
+      }
       return true;
     }
     return false;
   },
 
-  addCredits: (amount: number) => {
-    set((state) => ({
+  addCredits: async (amount: number) => {
+    const { user, credits } = get();
+    set({
       credits: {
-        ...state.credits,
-        balance: state.credits.balance + amount,
+        ...credits,
+        balance: credits.balance + amount,
       },
-    }));
+    });
+    if (user?.id) {
+      await authService.addCredits(user.id, amount);
+    }
   },
 
-  upgradePlan: (plan: 'pro' | 'enterprise') => {
-    set((state) => ({
-      user: state.user ? { ...state.user, plan } : null,
-      subscription: {
-        id: `sub_${Date.now()}`,
-        user_id: state.user?.id || 'usr_1',
-        plan_id: `${plan}_monthly`,
-        status: 'active',
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      },
+  upgradePlan: async (plan: 'pro' | 'enterprise') => {
+    const { user, credits } = get();
+    if (!user) return;
+
+    const newCreditsBalance = credits.balance + (plan === 'pro' ? 200 : 1000);
+    const newSub: Subscription = {
+      id: `sub_${Date.now()}`,
+      user_id: user.id,
+      plan_id: `${plan}_monthly`,
+      status: 'active',
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+
+    set({
+      user: { ...user, plan },
+      subscription: newSub,
       credits: {
-        ...state.credits,
-        balance: state.credits.balance + (plan === 'pro' ? 200 : 1000),
-      }
-    }));
+        ...credits,
+        balance: newCreditsBalance,
+      },
+    });
+
+    try {
+      await supabase
+        .from('profiles')
+        .update({ plan, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      await supabase
+        .from('user_credits')
+        .update({ balance: newCreditsBalance, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+
+      await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: user.id,
+          plan_id: `${plan}_monthly`,
+          status: 'active',
+        });
+    } catch (err) {
+      console.warn('Error syncing upgraded plan with Supabase:', err);
+    }
   },
 
   initializeAuth: async () => {
     try {
-      set({ isLoading: true });
-      const user = await authService.getCurrentUser();
-      if (user) {
+      // 1. Initial session check
+      const currentUser = await authService.getCurrentUser();
+      if (currentUser) {
+        const [userCredits, subResult] = await Promise.all([
+          authService.getUserCredits(currentUser.id),
+          supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+
         set({
-          user,
-          isAdmin: user.role === 'admin' || user.email.endsWith('@snapcut.ai'),
+          user: currentUser,
+          credits: userCredits || { ...initialCredits, user_id: currentUser.id },
+          subscription: subResult.data || null,
+          isAdmin: currentUser.role === 'admin' || currentUser.email.endsWith('@snapcut.ai'),
+          isLoading: false,
+        });
+      } else {
+        set({
+          user: null,
+          isLoading: false,
+        });
+      }
+
+      // 2. Setup real-time auth state listener once
+      if (!authSubscriptionInitialized) {
+        authSubscriptionInitialized = true;
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+            if (session?.user) {
+              const profile = await authService.getCurrentUser();
+              if (profile) {
+                const [userCredits, subResult] = await Promise.all([
+                  authService.getUserCredits(profile.id),
+                  supabase
+                    .from('subscriptions')
+                    .select('*')
+                    .eq('user_id', profile.id)
+                    .eq('status', 'active')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle(),
+                ]);
+
+                set({
+                  user: profile,
+                  credits: userCredits || { ...initialCredits, user_id: profile.id },
+                  subscription: subResult.data || null,
+                  isAdmin: profile.role === 'admin' || profile.email.endsWith('@snapcut.ai'),
+                  isLoading: false,
+                });
+              }
+            }
+          } else if (event === 'SIGNED_OUT') {
+            set({
+              user: null,
+              credits: initialCredits,
+              subscription: null,
+              isAdmin: false,
+              isLoading: false,
+            });
+          }
         });
       }
     } catch (error) {
       console.error('Auth initialization error:', error);
-    } finally {
       set({ isLoading: false });
     }
   },
 
   signOut: async () => {
-    await authService.logout();
-    set({
-      user: null,
-      isAdmin: false,
-    });
+    try {
+      await authService.logout();
+    } finally {
+      set({
+        user: null,
+        credits: initialCredits,
+        subscription: null,
+        isAdmin: false,
+      });
+    }
   },
 
   updateProfile: async (data: Partial<UserProfile>) => {

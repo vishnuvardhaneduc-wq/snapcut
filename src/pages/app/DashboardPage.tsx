@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useWorkspaceStore } from '../../store/workspaceStore';
@@ -19,8 +19,16 @@ import {
 
 export const DashboardPage: React.FC = () => {
   const { user, credits } = useAuthStore();
-  const { history } = useWorkspaceStore();
+  const { history, loadHistory } = useWorkspaceStore();
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const activeHistory = history.filter(
+    (item) => new Date(item.expires_at).getTime() > Date.now()
+  );
 
   const totalQuota = credits.daily_free_remaining + credits.balance;
 
@@ -175,37 +183,48 @@ export const DashboardPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {history.slice(0, 4).map((item) => (
-                <tr key={item.id} className="hover:bg-white/[0.02] transition">
-                  <td className="py-3">
-                    <div className="w-12 h-12 rounded-lg checkerboard-pattern overflow-hidden border border-white/10">
-                      <img
-                        src={item.processed_url || item.original_url}
-                        alt={item.original_filename}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </td>
-                  <td className="py-3 font-medium text-white max-w-[180px] truncate">
-                    {item.original_filename}
-                  </td>
-                  <td className="py-3 text-slate-400 font-mono">
-                    {formatBytes(item.file_size_bytes)} • {item.width || 1920}×{item.height || 1080}
-                  </td>
-                  <td className="py-3 font-mono text-cyan-400">
-                    {formatTimeRemaining(item.expires_at)}
-                  </td>
-                  <td className="py-3 text-right">
-                    <button
-                      onClick={() => downloadImage(item.processed_url || item.original_url, item.original_filename)}
-                      className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-medium inline-flex items-center gap-1.5 transition"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Download PNG</span>
-                    </button>
+              {activeHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-500">
+                    No active cutouts in the last 24 hours.{' '}
+                    <Link to="/app/upload" className="text-cyan-400 hover:underline font-semibold ml-1">
+                      Upload a photo
+                    </Link>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                activeHistory.slice(0, 4).map((item) => (
+                  <tr key={item.id} className="hover:bg-white/[0.02] transition">
+                    <td className="py-3">
+                      <div className="w-12 h-12 rounded-lg checkerboard-pattern overflow-hidden border border-white/10">
+                        <img
+                          src={item.processed_url || item.original_url}
+                          alt={item.original_filename}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </td>
+                    <td className="py-3 font-medium text-white max-w-[180px] truncate">
+                      {item.original_filename}
+                    </td>
+                    <td className="py-3 text-slate-400 font-mono">
+                      {formatBytes(item.file_size_bytes)} • {item.width || 1920}×{item.height || 1080}
+                    </td>
+                    <td className="py-3 font-mono text-cyan-400">
+                      {formatTimeRemaining(item.expires_at)}
+                    </td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => downloadImage(item.processed_url || item.original_url, item.original_filename)}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-medium inline-flex items-center gap-1.5 transition"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download PNG</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

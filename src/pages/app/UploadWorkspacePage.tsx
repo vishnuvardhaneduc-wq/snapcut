@@ -93,6 +93,7 @@ export const UploadWorkspacePage: React.FC = () => {
         width: imgW || result.width,
         height: imgH || result.height,
         bytes: result.fileSizeBytes,
+        cloudinaryPublicId: result.cloudinaryPublicId,
       });
 
       // Trigger celebratory confetti

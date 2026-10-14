@@ -58,7 +58,25 @@ export const Logo: React.FC<LogoProps> = ({
   );
 
   if (linkTo) {
-    return <Link to={linkTo}>{content}</Link>;
+    return (
+      <Link
+        to={linkTo}
+        onClick={() => {
+          const isSamePage = window.location.pathname === linkTo;
+          window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: isSamePage ? 'smooth' : 'instant',
+          });
+          const scrollContainers = document.querySelectorAll<HTMLElement>('main, [data-scroll-container]');
+          scrollContainers.forEach((container) => {
+            container.scrollTo({ top: 0, left: 0, behavior: isSamePage ? 'smooth' : 'instant' });
+          });
+        }}
+      >
+        {content}
+      </Link>
+    );
   }
 
   return content;

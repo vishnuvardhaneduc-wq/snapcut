@@ -13,6 +13,8 @@ import { AboutPage } from './pages/public/AboutPage';
 import { ContactPage } from './pages/public/ContactPage';
 import { PrivacyPage } from './pages/public/PrivacyPage';
 import { TermsPage } from './pages/public/TermsPage';
+import { RefundPage } from './pages/public/RefundPage';
+import { ShippingPage } from './pages/public/ShippingPage';
 
 // Auth Pages
 import { LoginPage } from './pages/auth/LoginPage';
@@ -42,6 +44,8 @@ import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 // Route Guards
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AdminRoute } from './components/common/AdminRoute';
+import { ScrollToTop } from './components/common/ScrollToTop';
+import { Chatbot } from './components/common/Chatbot';
 
 export const App: React.FC = () => {
   const { initializeAuth } = useAuthStore();
@@ -51,7 +55,9 @@ export const App: React.FC = () => {
   }, [initializeAuth]);
 
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/features" element={<FeaturesPage />} />
@@ -64,6 +70,10 @@ export const App: React.FC = () => {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
+      <Route path="/refund" element={<RefundPage />} />
+      <Route path="/cancellation" element={<Navigate to="/refund" replace />} />
+      <Route path="/shipping" element={<ShippingPage />} />
+      <Route path="/delivery" element={<Navigate to="/shipping" replace />} />
 
       {/* Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
@@ -84,13 +94,23 @@ export const App: React.FC = () => {
         <Route index element={<Navigate to="/app/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="upload" element={<UploadWorkspacePage />} />
+        <Route path="uploads" element={<UploadWorkspacePage />} />
         <Route path="preview" element={<Navigate to="/app/upload" replace />} />
         <Route path="downloads" element={<DownloadsHistoryPage />} />
+        <Route path="download" element={<Navigate to="/app/downloads" replace />} />
         <Route path="billing" element={<BillingPage />} />
         <Route path="credits" element={<CreditsPage />} />
         <Route path="api-keys" element={<ApiKeysPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
+
+      {/* Direct Shortcuts / Aliases */}
+      <Route path="/upload" element={<Navigate to="/app/upload" replace />} />
+      <Route path="/uploads" element={<Navigate to="/app/uploads" replace />} />
+      <Route path="/workspace" element={<Navigate to="/app/upload" replace />} />
+      <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+      <Route path="/downloads" element={<Navigate to="/app/downloads" replace />} />
+      <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
 
       {/* Admin Routes (Protected) */}
       <Route
@@ -112,5 +132,7 @@ export const App: React.FC = () => {
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <Chatbot />
+    </>
   );
 };

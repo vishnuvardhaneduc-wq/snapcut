@@ -1,3 +1,7 @@
+const WEBHOOK_URL =
+  import.meta.env.VITE_N8N_WEBHOOK_URL ||
+  'https://vishnuvardhan28.app.n8n.cloud/webhook/43263dd7-d725-4068-acea-90140df5ef15';
+
 export interface RemovalOptions {
   file: File;
   imageUrl: string;
@@ -12,6 +16,101 @@ export interface RemovalResult {
   width: number;
   height: number;
   fileSizeBytes: number;
+  cloudinaryPublicId?: string;
+}
+
+export interface WebhookResponse {
+  url?: string;
+  processedUrl?: string;
+  image_url?: string;
+  public_id?: string;
+  publicId?: string;
+}
+
+/**
+ * Send image binary buffer to n8n AI webhook
+ */
+export async function sendImageToWebhook(
+  file: File,
+  onProgress?: (progress: number, step: string) => void
+): Promise<{ url: string; public_id?: string }> {
+  onProgress?.(25, 'Uploading photo to n8n AI automation...');
+  const arrayBuffer = await file.arrayBuffer();
+
+  const response = await fetch(WEBHOOK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(file.name)}"`,
+      'X-File-Name': encodeURIComponent(file.name),
+      'X-File-Size': String(file.size),
+      'X-File-Type': file.type || 'application/octet-stream',
+    },
+    body: arrayBuffer,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`n8n webhook error (${response.status}): ${errorText || response.statusText}`);
+  }
+
+  onProgress?.(70, 'Receiving AI cutout from Cloudinary...');
+
+  const contentType = response.headers.get('content-type') || '';
+  let data: any;
+
+  if (contentType.includes('application/json')) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (text.startsWith('http')) {
+        return { url: text.trim() };
+      }
+      throw new Error('n8n webhook returned an invalid format');
+    }
+  }
+
+  const resultUrl = data.url || data.processedUrl || data.image_url;
+  if (!resultUrl) {
+    throw new Error('n8n response missing "url" field');
+  }
+
+  // Extract or parse Cloudinary public_id
+  let publicId = data.public_id || data.publicId || data.cloudinary_public_id;
+  if (!publicId && typeof resultUrl === 'string' && resultUrl.includes('cloudinary.com')) {
+    const match = resultUrl.match(/\/upload\/(?:v\d+\/)?([^.]+)/);
+    if (match && match[1]) {
+      publicId = match[1];
+    }
+  }
+
+  return { url: resultUrl, public_id: publicId };
+}
+
+async function getImageDimensions(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+    };
+    img.onerror = () => resolve({ width: 1920, height: 1080 });
+    img.src = src;
+  });
+}
+
+async function estimateUrlBytes(url: string): Promise<number> {
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    const cl = res.headers.get('content-length');
+    if (cl) return parseInt(cl, 10);
+  } catch {
+    // ignore
+  }
+  return 1000000;
 }
 
 /**
@@ -20,7 +119,9 @@ export interface RemovalResult {
  * - Max 10MB
  * - Max 5000x5000 px
  */
-export async function validateImageFile(file: File): Promise<{ valid: boolean; error?: string; width?: number; height?: number }> {
+export async function validateImageFile(
+  file: File
+): Promise<{ valid: boolean; error?: string; width?: number; height?: number }> {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   if (!allowedTypes.includes(file.type.toLowerCase())) {
     return { valid: false, error: 'Unsupported format. Please upload JPG, PNG, or WEBP.' };
@@ -37,7 +138,10 @@ export async function validateImageFile(file: File): Promise<{ valid: boolean; e
     img.onload = () => {
       URL.revokeObjectURL(url);
       if (img.naturalWidth > 5000 || img.naturalHeight > 5000) {
-        resolve({ valid: false, error: `Image dimensions (${img.naturalWidth}x${img.naturalHeight}) exceed 5000x5000px maximum.` });
+        resolve({
+          valid: false,
+          error: `Image dimensions (${img.naturalWidth}x${img.naturalHeight}) exceed 5000x5000px maximum.`,
+        });
       } else {
         resolve({ valid: true, width: img.naturalWidth, height: img.naturalHeight });
       }
@@ -51,8 +155,8 @@ export async function validateImageFile(file: File): Promise<{ valid: boolean; e
 }
 
 /**
- * Local High-Precision AI Edge Saliency Canvas Segmenter
- * Removes solid, gradient, studio, or high-contrast backgrounds with soft-edge alpha preservation.
+ * Fallback Local Canvas Segmenter
+ * Removes solid or uniform backgrounds if webhook is offline
  */
 export async function removeBackgroundLocal(
   imageSource: File | string,
@@ -92,7 +196,7 @@ export async function removeBackgroundLocal(
   const imgData = ctx.getImageData(0, 0, width, height);
   const data = imgData.data;
 
-  // Sample corner pixel colors to determine primary background palette
+  // Sample corner pixel colors
   const corners = [
     [0, 0],
     [width - 1, 0],
@@ -107,7 +211,6 @@ export async function removeBackgroundLocal(
     bgSamples.push([data[idx], data[idx + 1], data[idx + 2]]);
   });
 
-  // Calculate Euclidean color distance threshold
   const threshold = 48;
 
   for (let i = 0; i < data.length; i += 4) {
@@ -126,9 +229,8 @@ export async function removeBackgroundLocal(
     }
 
     if (minDistance < threshold) {
-      data[i + 3] = 0; // Completely transparent
+      data[i + 3] = 0;
     } else if (minDistance < threshold + 24) {
-      // Soft antialiased feathered edge
       const alpha = (minDistance - threshold) / 24;
       data[i + 3] = Math.round(alpha * 255);
     }
@@ -153,24 +255,41 @@ export async function removeBackgroundLocal(
 }
 
 /**
- * Frontend Mock / Demo Background Removal Processor
- * Runs a simulated segmentation pipeline with progressive visual feedback
- * and client-side canvas cutout rendering without external network dependencies.
+ * Background Removal Processor
+ * Primary: Sends image to n8n AI webhook automation
+ * Fallback: Uses client-side segmenter if n8n is unreachable
  */
 export async function processBackgroundRemoval(options: RemovalOptions): Promise<RemovalResult> {
   const { file, imageUrl, onProgress } = options;
   const startTime = performance.now();
 
-  onProgress?.(20, 'Preparing image in local memory buffer...');
-  await new Promise((r) => setTimeout(r, 250));
+  if (file) {
+    try {
+      const webhookRes = await sendImageToWebhook(file, onProgress);
+      const processedUrl = webhookRes.url;
 
-  onProgress?.(45, 'Detecting subject contours (Demo Mode)...');
-  await new Promise((r) => setTimeout(r, 300));
+      onProgress?.(85, 'Calculating resolution dimensions...');
+      const [{ width, height }, bytes] = await Promise.all([
+        getImageDimensions(processedUrl),
+        estimateUrlBytes(processedUrl),
+      ]);
 
-  onProgress?.(70, 'Generating transparent alpha cutout...');
-  await new Promise((r) => setTimeout(r, 250));
+      onProgress?.(100, 'Completed!');
+      return {
+        processedUrl,
+        processingTimeMs: Math.round(performance.now() - startTime),
+        width,
+        height,
+        fileSizeBytes: bytes,
+        cloudinaryPublicId: webhookRes.public_id,
+      };
+    } catch (webhookErr: any) {
+      console.warn('n8n Webhook failed, falling back to local engine:', webhookErr?.message);
+      onProgress?.(30, 'n8n offline, falling back to local cutout engine...');
+    }
+  }
 
-  // Generate transparent cutout using local canvas segmenter
+  // Fallback to local segmenter
   const result = await removeBackgroundLocal(file || imageUrl, onProgress);
 
   return {
@@ -178,4 +297,3 @@ export async function processBackgroundRemoval(options: RemovalOptions): Promise
     processingTimeMs: Math.max(result.processingTimeMs, Math.round(performance.now() - startTime)),
   };
 }
-
