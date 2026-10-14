@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '../../components/common/Logo';
 import { useAuthStore } from '../../store/authStore';
 import { authService } from '../../services/authService';
-import { Mail, Lock, User, ArrowRight, Sparkles, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { Mail, Lock, User, ArrowRight, Sparkles, AlertCircle, Loader2, CheckCircle2, Info } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectPath = searchParams.get('redirect') || '/app/dashboard';
+  const rawRedirect = searchParams.get('redirect') || '/app/dashboard';
+  const redirectPath =
+    rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+      ? rawRedirect
+      : '/app/dashboard';
 
-  const { setUser } = useAuthStore();
+  const { user, isLoading, setUser } = useAuthStore();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +23,12 @@ export const RegisterPage: React.FC = () => {
   const [successInfo, setSuccessInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate(redirectPath, { replace: true });
+    }
+  }, [user, isLoading, navigate, redirectPath]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +81,18 @@ export const RegisterPage: React.FC = () => {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0 z-10">
         <div className="bg-[#0D111A] border border-white/10 rounded-2xl p-6 sm:p-8 shadow-[0_0_40px_rgba(0,0,0,0.6)]">
           
+          {!isSupabaseConfigured && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2">
+              <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+              <div className="space-y-1">
+                <p className="font-semibold text-amber-200">Supabase Environment Unset</p>
+                <p className="text-amber-300/80 leading-relaxed">
+                  Live user registration requires <code className="font-mono text-[11px] bg-black/40 px-1 py-0.5 rounded">VITE_SUPABASE_URL</code> and <code className="font-mono text-[11px] bg-black/40 px-1 py-0.5 rounded">VITE_SUPABASE_ANON_KEY</code>. Configure them in Vercel Project Settings.
+                </p>
+              </div>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />

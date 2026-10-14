@@ -1,6 +1,4 @@
-const WEBHOOK_URL =
-  import.meta.env.VITE_N8N_WEBHOOK_URL ||
-  'https://vishnuvardhan28.app.n8n.cloud/webhook/43263dd7-d725-4068-acea-90140df5ef15';
+const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || '';
 
 export interface RemovalOptions {
   file: File;
@@ -34,6 +32,10 @@ export async function sendImageToWebhook(
   file: File,
   onProgress?: (progress: number, step: string) => void
 ): Promise<{ url: string; public_id?: string }> {
+  if (!WEBHOOK_URL) {
+    throw new Error('n8n webhook URL is not configured. Set VITE_N8N_WEBHOOK_URL in environment variables.');
+  }
+
   onProgress?.(25, 'Uploading photo to n8n AI automation...');
   const arrayBuffer = await file.arrayBuffer();
 

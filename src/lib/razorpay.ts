@@ -6,7 +6,7 @@ declare global {
   }
 }
 
-const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_1DP5mmOlF5G5ag';
+const razorpayKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
 
 export interface CheckoutOptions {
   planId: string;

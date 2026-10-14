@@ -15,7 +15,8 @@ export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }
   }
 
   if (!user) {
-    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+    const fullPath = location.pathname + location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(fullPath)}`} replace />;
   }
 
   if (!isAdmin) {

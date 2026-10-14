@@ -9,6 +9,8 @@ import {
   HelpCircle,
   GripHorizontal,
   Move,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import { sendChatMessage, type ChatMessage } from '../../services/chatService';
 
@@ -44,6 +46,8 @@ export const Chatbot: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   // Position coordinates for freely moving the trigger button & chat window
   const [buttonPos, setButtonPos] = useState<{ x: number; y: number } | null>(null);
@@ -335,6 +339,63 @@ export const Chatbot: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setErrorMessage('Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setErrorMessage(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        if (event.error !== 'no-speech') {
+          setErrorMessage(`Voice recognition note: ${event.error}`);
+        }
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -603,23 +664,41 @@ export const Chatbot: React.FC = () => {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about cutouts, credits, API..."
+                placeholder={isListening ? 'Listening... speak your question...' : 'Ask about cutouts, credits, API...'}
                 rows={1}
                 maxLength={1000}
-                className="w-full pl-3.5 pr-12 py-2.5 bg-[#07090e] border border-white/10 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 resize-none max-h-24 transition"
+                className={`w-full pl-3.5 pr-20 py-2.5 bg-[#07090e] border rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none resize-none max-h-24 transition ${
+                  isListening
+                    ? 'border-cyan-400 ring-1 ring-cyan-400'
+                    : 'border-white/10 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400'
+                }`}
               />
-              <button
-                onClick={() => handleSendMessage()}
-                disabled={!inputValue.trim() || isLoading}
-                className="absolute right-1.5 p-2 rounded-lg bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-bold hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-[0_0_10px_rgba(0,242,254,0.3)]"
-                title="Send message (Enter)"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </button>
+              <div className="absolute right-1.5 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  className={`p-2 rounded-lg transition ${
+                    isListening
+                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-pulse'
+                      : 'text-slate-400 hover:text-cyan-300 hover:bg-white/5'
+                  }`}
+                  title={isListening ? 'Listening... click to stop' : 'Voice command (speech-to-text)'}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => handleSendMessage()}
+                  disabled={!inputValue.trim() || isLoading}
+                  className="p-2 rounded-lg bg-gradient-to-r from-cyan-500 to-sky-500 text-slate-950 font-bold hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-[0_0_10px_rgba(0,242,254,0.3)]"
+                  title="Send message (Enter)"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
             <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-slate-500 font-mono">
               <span>Press Enter to send</span>

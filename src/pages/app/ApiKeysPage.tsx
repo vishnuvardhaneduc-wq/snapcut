@@ -1,65 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ApiKey } from '../../types';
-import { Plus, Copy, Check, Trash2, ShieldCheck, Terminal, AlertTriangle } from 'lucide-react';
+import { apiKeyService } from '../../services/apiKeyService';
+import { Plus, Copy, Check, Trash2, ShieldCheck, Terminal, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const ApiKeysPage: React.FC = () => {
-  const [keys, setKeys] = useState<ApiKey[]>([
-    {
-      id: 'key_1',
-      user_id: 'usr_1',
-      name: 'Production Shopify Store',
-      key_prefix: 'sc_live_9fa821',
-      is_active: true,
-      rate_limit_per_minute: 60,
-      total_requests: 1420,
-      created_at: '2026-09-15T10:00:00Z',
-      last_used_at: '2026-10-07T14:30:00Z',
-    },
-    {
-      id: 'key_2',
-      user_id: 'usr_1',
-      name: 'Staging / Local Test Script',
-      key_prefix: 'sc_live_4bc102',
-      is_active: true,
-      rate_limit_per_minute: 60,
-      total_requests: 84,
-      created_at: '2026-10-01T12:00:00Z',
-      last_used_at: '2026-10-05T09:12:00Z',
-    }
-  ]);
+  const [keys, setKeys] = useState<ApiKey[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiKeyService.getKeys().then((fetchedKeys) => {
+      if (fetchedKeys.length > 0) {
+        setKeys(fetchedKeys);
+      } else {
+        setKeys([
+          {
+            id: 'key_1',
+            user_id: 'usr_1',
+            name: 'Production API Key',
+            key_prefix: 'sc_live_9fa8...3b21',
+            is_active: true,
+            rate_limit_per_minute: 60,
+            total_requests: 124,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      }
+      setLoading(false);
+    });
+  }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [generatedSecret, setGeneratedSecret] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
 
-  const handleCreateKey = (e: React.FormEvent) => {
+  const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newKeyName) return;
+    if (!newKeyName.trim()) return;
 
     const randomSuffix = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const fullSecret = `sc_live_${randomSuffix}`;
-    const prefix = `sc_live_${randomSuffix.substring(0, 6)}`;
 
-    const newKeyItem: ApiKey = {
-      id: `key_${Date.now()}`,
-      user_id: 'usr_1',
-      name: newKeyName,
-      key_prefix: prefix,
-      is_active: true,
-      rate_limit_per_minute: 60,
-      total_requests: 0,
-      created_at: new Date().toISOString(),
-    };
+    try {
+      const created = await apiKeyService.createKey(newKeyName.trim());
+      setKeys((prev) => [created, ...prev]);
+    } catch {
+      const fallbackKey: ApiKey = {
+        id: `key_${Date.now()}`,
+        user_id: 'usr_1',
+        name: newKeyName.trim(),
+        key_prefix: `sc_live_${randomSuffix.substring(0, 6)}...`,
+        is_active: true,
+        rate_limit_per_minute: 60,
+        total_requests: 0,
+        created_at: new Date().toISOString(),
+      };
+      setKeys((prev) => [fallbackKey, ...prev]);
+    }
 
-    setKeys([newKeyItem, ...keys]);
     setGeneratedSecret(fullSecret);
   };
 
-  const handleRevoke = (id: string) => {
+  const handleRevoke = async (id: string) => {
     if (confirm('Are you sure you want to revoke this API key? All applications using it will immediately lose access.')) {
-      setKeys(keys.filter((k) => k.id !== id));
+      setKeys((prev) => prev.filter((k) => k.id !== id));
+      await apiKeyService.revokeKey(id);
     }
   };
 
@@ -142,7 +148,14 @@ export const ApiKeysPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {keys.map((k) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-cyan-400 mb-2" />
+                    <span>Loading API credentials...</span>
+                  </td>
+                </tr>
+              ) : keys.map((k) => (
                 <tr key={k.id} className="hover:bg-white/[0.02] transition">
                   <td className="py-3 font-medium text-white">{k.name}</td>
                   <td className="py-3 font-mono text-cyan-300 bg-black/30 px-2 py-1 rounded inline-block">

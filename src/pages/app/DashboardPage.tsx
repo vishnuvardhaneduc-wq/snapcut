@@ -26,8 +26,10 @@ export const DashboardPage: React.FC = () => {
     loadHistory();
   }, [loadHistory]);
 
+  const [now] = useState(() => Date.now());
+
   const activeHistory = history.filter(
-    (item) => new Date(item.expires_at).getTime() > Date.now()
+    (item) => new Date(item.expires_at).getTime() > now
   );
 
   const totalQuota = credits.daily_free_remaining + credits.balance;

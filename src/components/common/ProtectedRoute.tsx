@@ -18,7 +18,8 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   if (!user) {
-    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
+    const fullPath = location.pathname + location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(fullPath)}`} replace />;
   }
 
   return <>{children}</>;

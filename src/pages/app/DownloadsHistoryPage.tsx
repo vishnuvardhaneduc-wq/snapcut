@@ -7,19 +7,19 @@ export const DownloadsHistoryPage: React.FC = () => {
   const { history, historyLoading, loadHistory, removeFromHistory } = useWorkspaceStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [, setTick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     loadHistory();
     // Refresh countdown every 30 seconds
     const interval = setInterval(() => {
-      setTick((t) => t + 1);
+      setNow(Date.now());
     }, 30000);
     return () => clearInterval(interval);
   }, [loadHistory]);
 
   const activeHistory = history.filter(
-    (item) => new Date(item.expires_at).getTime() > Date.now()
+    (item) => new Date(item.expires_at).getTime() > now
   );
 
   const filtered = activeHistory.filter((item) =>
