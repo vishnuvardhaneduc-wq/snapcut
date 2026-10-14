@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { authService } from '../services/authService';
 import type { UserProfile, UserCredits, Subscription } from '../types';
 
@@ -141,6 +141,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initializeAuth: async () => {
     try {
+      if (!isSupabaseConfigured) {
+        set({ user: null, isLoading: false });
+        return;
+      }
+
       // 1. Initial session check
       const currentUser = await authService.getCurrentUser();
       if (currentUser) {
