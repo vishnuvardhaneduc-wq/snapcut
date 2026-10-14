@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
+import { executeAgentAction, type AgentExecutionResult } from '../../services/agentActionService';
 import {
   X,
   Send,
@@ -11,15 +14,19 @@ import {
   Move,
   Mic,
   MicOff,
+  Compass,
+  ExternalLink,
 } from 'lucide-react';
 import { sendChatMessage, type ChatMessage } from '../../services/chatService';
 
 const SUGGESTED_QUESTIONS = [
-  'How do I remove an image background?',
-  'What file formats and size limits are supported?',
-  'Are my uploaded images permanently saved?',
-  'How do daily free credits work?',
-  'How do I use the Developer REST API?',
+  'Go to dashboard',
+  'Open my uploads',
+  'Show recent images',
+  'View pricing & plans',
+  'Open settings',
+  'What formats are supported?',
+  'How do daily credits work?',
 ];
 
 const formatCurrentTime = (): string => {
@@ -36,11 +43,13 @@ const INITIAL_MESSAGE: ChatMessage = {
   id: 'welcome-1',
   sender: 'assistant',
   text:
-    "👋 Hi there! I'm **SnapCut Assistant**, powered by Gemini AI.\n\nI can help you with AI background cutouts, upload troubleshooting, credits, download issues, or API integration. How can I help you today?",
+    "👋 Hi there! I'm **SnapCut Agent**, powered by Gemini AI.\n\nI can answer questions or navigate the site for you via **voice or text**:\n- 🚀 *\"Go to dashboard\"*\n- ✂️ *\"Open my uploads\"*\n- 🖼️ *\"Show recent images\"*\n- 💳 *\"View pricing & plans\"*\n- ⚙️ *\"Open settings\"*",
   timestamp: 'Just now',
 };
 
 export const Chatbot: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, isAdmin } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputValue, setInputValue] = useState('');
@@ -315,12 +324,22 @@ export const Chatbot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const reply = await sendChatMessage(text, newHistory);
+      const { reply, action } = await sendChatMessage(text, newHistory);
+      let actionResult: AgentExecutionResult | null = null;
+
+      if (action) {
+        actionResult = executeAgentAction(action, { user, isAdmin, navigate });
+      }
+
       const assistantMsg: ChatMessage = {
         id: createMsgId('bot'),
         sender: 'assistant',
-        text: reply,
+        text: actionResult && actionResult.redirectedToLogin
+          ? `${reply}\n\n${actionResult.message}`
+          : reply,
         timestamp: formatCurrentTime(),
+        action,
+        actionExecuted: Boolean(actionResult?.executed),
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err: any) {
@@ -341,13 +360,17 @@ export const Chatbot: React.FC = () => {
 
   useEffect(() => {
     return () => {
-      recognitionRef.current?.stop();
+      try {
+        recognitionRef.current?.stop();
+      } catch {}
     };
   }, []);
 
   const toggleVoiceInput = () => {
     if (isListening) {
-      recognitionRef.current?.stop();
+      try {
+        recognitionRef.current?.stop();
+      } catch {}
       setIsListening(false);
       return;
     }
@@ -356,7 +379,7 @@ export const Chatbot: React.FC = () => {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setErrorMessage('Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      setErrorMessage('Voice commands are not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
@@ -372,14 +395,24 @@ export const Chatbot: React.FC = () => {
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results?.[0]?.[0]?.transcript;
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+        setIsListening(false);
+        try {
+          recognition.stop();
+        } catch {}
+
         if (transcript) {
-          setInputValue((prev) => (prev ? `${prev} ${transcript}` : transcript));
+          setInputValue('');
+          handleSendMessage(transcript);
         }
       };
 
       recognition.onerror = (event: any) => {
-        if (event.error !== 'no-speech') {
+        if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+          setErrorMessage('Microphone access denied. Please allow microphone permissions in your browser to speak commands.');
+        } else if (event.error === 'audio-capture') {
+          setErrorMessage('No microphone detected. Please connect a microphone to use voice commands.');
+        } else if (event.error !== 'no-speech') {
           setErrorMessage(`Voice recognition note: ${event.error}`);
         }
         setIsListening(false);
@@ -393,6 +426,7 @@ export const Chatbot: React.FC = () => {
       recognition.start();
     } catch {
       setIsListening(false);
+      setErrorMessage('Could not access microphone. Please check browser permissions.');
     }
   };
 
@@ -586,6 +620,25 @@ export const Chatbot: React.FC = () => {
                       }`}
                   >
                     {renderFormattedText(msg.text)}
+
+                    {/* Agentic Navigation Action Pill */}
+                    {msg.action && (
+                      <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-1.5 text-cyan-300 font-mono">
+                          <Compass className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span>Action: <strong className="text-white">{msg.action.label}</strong></span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => executeAgentAction(msg.action!, { user, isAdmin, navigate })}
+                          className="px-2.5 py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-[11px] font-semibold transition flex items-center gap-1"
+                        >
+                          <span>Go</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
                     <div
                       className={`text-[10px] mt-1 text-right ${isUser ? 'text-cyan-100/70' : 'text-slate-500'
                         }`}
@@ -596,6 +649,15 @@ export const Chatbot: React.FC = () => {
                 </div>
               );
             })}
+
+            {/* Live Voice Listening Indicator */}
+            {isListening && (
+              <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs flex items-center gap-3 animate-pulse">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                <span className="font-semibold text-white">Listening...</span>
+                <span className="text-[11px] text-slate-400 font-mono ml-auto">Speak a command (e.g. &ldquo;Go to dashboard&rdquo;)</span>
+              </div>
+            )}
 
             {/* Typing / Loading Indicator */}
             {isLoading && (

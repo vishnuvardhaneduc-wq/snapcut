@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { extractAgentAction, type AgentAction } from './agentActionService';
 
 export interface ChatMessage {
   id: string;
@@ -6,22 +7,29 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   isError?: boolean;
+  action?: AgentAction | null;
+  actionExecuted?: boolean;
+}
+
+export interface ChatServiceResponse {
+  reply: string;
+  action: AgentAction | null;
 }
 
 // Client-side rate-limiting and throttle state
 let lastMessageTime = 0;
-const MIN_COOLDOWN_MS = 1000; // 1 second between messages
+const MIN_COOLDOWN_MS = 600; // fast responsive cooldown
 const MAX_MESSAGES_PER_SESSION = 50;
 let sessionMessageCount = 0;
 
 /**
- * Validates and sends a user message to the Gemini-powered SnapCut support service.
- * Follows a secure server-side invocation model via Supabase Edge Function with local dev fallback.
+ * Validates and sends a user message to the Gemini-powered SnapCut agentic service.
+ * Supports natural language queries and agentic site navigation commands.
  */
 export async function sendChatMessage(
   message: string,
   history: ChatMessage[]
-): Promise<string> {
+): Promise<ChatServiceResponse> {
   const trimmed = message.trim();
 
   // 1. Client-side input validation
@@ -58,9 +66,7 @@ export async function sendChatMessage(
     }));
 
   // 3. Execution strategy:
-  // In local development (Vite dev server), use the local /api/chat proxy directly to avoid
-  // CORS preflight errors from an undeployed remote Supabase edge function.
-  // In production, invoke the Supabase Edge Function 'chat' first.
+  // In dev, use local proxy. In production, use Supabase Edge Function first, then Vercel /api/chat.
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
@@ -77,7 +83,8 @@ export async function sendChatMessage(
       if (localRes.ok) {
         const localData = await localRes.json();
         if (localData?.reply) {
-          return localData.reply;
+          const { cleanText, action } = extractAgentAction(localData.reply, trimmed);
+          return { reply: cleanText, action };
         }
       }
     } catch (localErr: any) {
@@ -95,7 +102,8 @@ export async function sendChatMessage(
     });
 
     if (!error && data?.reply) {
-      return data.reply;
+      const { cleanText, action } = extractAgentAction(data.reply, trimmed);
+      return { reply: cleanText, action };
     }
 
     if (error) {
@@ -120,7 +128,8 @@ export async function sendChatMessage(
       if (localRes.ok) {
         const localData = await localRes.json();
         if (localData?.reply) {
-          return localData.reply;
+          const { cleanText, action } = extractAgentAction(localData.reply, trimmed);
+          return { reply: cleanText, action };
         }
       }
     } catch (localErr: any) {
@@ -128,63 +137,83 @@ export async function sendChatMessage(
     }
   }
 
-  // 4. Friendly structured fallback if neither remote edge function nor local proxy responded
+  // 4. Structured agentic fallback if remote services are unreachable
   return generateHelpfulFallback(trimmed);
 }
 
 /**
- * Provides immediate, high-accuracy domain answers if the network/remote function
- * is temporarily unreachable, ensuring the user always receives assistance.
+ * Immediate, high-accuracy domain answers and agentic navigation intent resolution
+ * if the remote AI service is temporarily offline or unavailable.
  */
-function generateHelpfulFallback(query: string): string {
+function generateHelpfulFallback(query: string): ChatServiceResponse {
+  const { action } = extractAgentAction('', query);
+
+  if (action) {
+    return {
+      reply: `Certainly! Navigating to **${action.label}**...`,
+      action,
+    };
+  }
+
   const q = query.toLowerCase();
 
   if (q.includes('format') || q.includes('size') || q.includes('resolution') || q.includes('hd')) {
-    return (
-      "🖼️ **Supported Formats & Limits:**\n\n" +
-      "- **File Formats**: JPG, JPEG, PNG, and WEBP.\n" +
-      "- **Max File Size**: Up to 10MB per image.\n" +
-      "- **Max Resolution**: Up to Ultra HD 5000×5000px (25 megapixels).\n" +
-      "- **Output**: Transparent, high-fidelity PNG."
-    );
+    return {
+      reply:
+        "🖼️ **Supported Formats & Limits:**\n\n" +
+        "- **File Formats**: JPG, JPEG, PNG, and WEBP.\n" +
+        "- **Max File Size**: Up to 10MB per image.\n" +
+        "- **Max Resolution**: Up to Ultra HD 5000×5000px (25 megapixels).\n" +
+        "- **Output**: Transparent, high-fidelity PNG.",
+      action: null,
+    };
   }
 
   if (q.includes('credit') || q.includes('price') || q.includes('plan') || q.includes('free') || q.includes('cost')) {
-    return (
-      "💳 **SnapCut AI Credits & Plans:**\n\n" +
-      "- **Free Plan**: 5 credits every day, replenished automatically.\n" +
-      "- **Pro Creator**: 100 credits/mo, priority AI queue, and batch processing.\n" +
-      "- **Scale & Studio**: 500 credits/mo, dedicated AI worker, and unlimited REST API.\n" +
-      "- **Credit Packs**: Pay-as-you-go packs starting at 25 credits that never expire.\n\n" +
-      "You can view your quota or upgrade anytime in the **Billing & Plans** tab!"
-    );
+    return {
+      reply:
+        "💳 **SnapCut AI Credits & Plans:**\n\n" +
+        "- **Free Plan**: 5 credits every day, replenished automatically.\n" +
+        "- **Pro Creator**: 100 credits/mo, priority AI queue, and batch processing.\n" +
+        "- **Scale & Studio**: 500 credits/mo, dedicated AI worker, and unlimited REST API.\n" +
+        "- **Credit Packs**: Pay-as-you-go packs starting at 25 credits that never expire.\n\n" +
+        "Say **'open pricing'** or **'open credits'** to view your balance and upgrade!",
+      action: null,
+    };
   }
 
   if (q.includes('privac') || q.includes('delete') || q.includes('save') || q.includes('store') || q.includes('24')) {
-    return (
-      "🔒 **Privacy & 24-Hour Auto-Purge:**\n\n" +
-      "SnapCut AI enforces a strict zero-retention privacy policy. Uploaded images and generated transparent cutouts are **automatically and permanently destroyed after 24 hours** via Cloudinary lifecycle rules and background cron jobs."
-    );
+    return {
+      reply:
+        "🔒 **Privacy & 24-Hour Auto-Purge:**\n\n" +
+        "SnapCut AI enforces a strict zero-retention privacy policy. Uploaded images and generated transparent cutouts are **automatically and permanently destroyed after 24 hours** via Cloudinary lifecycle rules and background cron jobs.",
+      action: null,
+    };
   }
 
   if (q.includes('api') || q.includes('curl') || q.includes('python') || q.includes('node') || q.includes('key')) {
-    return (
-      "⚡ **Developer REST API:**\n\n" +
-      "You can integrate SnapCut AI with a simple HTTP POST request:\n" +
-      "- **Endpoint**: `https://api.snapcut.ai/v1/remove`\n" +
-      "- **Header**: `X-API-Key: sc_live_your_key`\n" +
-      "- Check out the **API Docs** page in the top header for full Python, Node.js, and cURL code snippets!"
-    );
+    return {
+      reply:
+        "⚡ **Developer REST API:**\n\n" +
+        "You can integrate SnapCut AI with a simple HTTP POST request:\n" +
+        "- **Endpoint**: `https://api.snapcut.ai/v1/remove`\n" +
+        "- **Header**: `X-API-Key: sc_live_your_key`\n" +
+        "- Say **'open api docs'** to read the documentation, or **'open api keys'** to generate your secret tokens!",
+      action: null,
+    };
   }
 
-  return (
-    "👋 Hello! I am **SnapCut Assistant**.\n\n" +
-    "I can help you with:\n" +
-    "- ✂️ **AI Background Removal**: 3-second transparent PNG generation\n" +
-    "- 📐 **Image Limits**: Up to 10MB and 5000×5000px Ultra HD\n" +
-    "- 🎁 **Credits & Plans**: 5 free daily credits, Pro subscriptions, and packs\n" +
-    "- 🔒 **24-Hour Privacy**: Automatic file deletion\n" +
-    "- 🚀 **Developer REST API**: Webhooks and keys\n\n" +
-    "How can I assist your workflow today?"
-  );
+  return {
+    reply:
+      "👋 Hello! I am **SnapCut Assistant**, your agentic website guide.\n\n" +
+      "You can ask me questions or command me with your voice or keyboard:\n" +
+      "- 🚀 *\"Go to dashboard\"*\n" +
+      "- ✂️ *\"Open my uploads\"*\n" +
+      "- 🖼️ *\"Show recent images\"*\n" +
+      "- 💳 *\"View pricing & plans\"*\n" +
+      "- ⚙️ *\"Open settings\"*\n" +
+      "- 🔑 *\"Show my API keys\"*\n\n" +
+      "Where would you like to go today?",
+    action: null,
+  };
 }
