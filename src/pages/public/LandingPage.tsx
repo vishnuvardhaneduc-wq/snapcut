@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../../components/common/Navbar';
 import { Footer } from '../../components/common/Footer';
 import { ImageComparisonSlider } from '../../components/common/ImageComparisonSlider';
+import { ChromaCurrent, type ChromaPattern } from '../../components/ui/chroma-current';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { validateImageFile } from '../../lib/backgroundRemover';
 import {
@@ -27,6 +28,7 @@ export const LandingPage: React.FC = () => {
   const { setFile } = useWorkspaceStore();
 
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [chromaPattern, setChromaPattern] = useState<ChromaPattern>('streams');
 
   // Sample hero comparison images
   const sampleOriginal = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=900&auto=format&fit=crop&q=80';
@@ -88,6 +90,24 @@ export const LandingPage: React.FC = () => {
 
       {/* Hero Section */}
       <section className="relative pt-12 pb-24 lg:pt-20 lg:pb-32 overflow-hidden">
+        {/* React Bits Pro: Chroma Current Ambient Waveform Background */}
+        <div className="absolute inset-0 z-0 pointer-events-auto opacity-70 [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_82%)]">
+          <ChromaCurrent
+            colors={['#00f2fe', '#8b5cf6']}
+            pattern={chromaPattern}
+            pitch={9}
+            dotSize={0.6}
+            variance={0.35}
+            bloom={0.7}
+            intensity={1.15}
+            turbulence={0.55}
+            speed={0.45}
+            trail={0.75}
+            interactive={true}
+            className="w-full h-full min-h-[750px]"
+          />
+        </div>
+
         {/* Glow Spheres */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-cyan-500/15 via-purple-600/15 to-transparent blur-[120px] rounded-full pointer-events-none" />
 
@@ -145,6 +165,27 @@ export const LandingPage: React.FC = () => {
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-cyan-400" /> Up to 5000×5000px HD
               </span>
+            </div>
+
+            {/* Interactive Chroma Current Flow Selector */}
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-full bg-[#0D111A]/80 border border-white/10 backdrop-blur-md max-w-fit mx-auto">
+              <span className="text-[11px] font-mono text-cyan-400/80 px-2.5 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-cyan-400" />
+                Chroma Flow:
+              </span>
+              {(['streams', 'waves', 'vortex', 'radial', 'contours'] as const).map((pat) => (
+                <button
+                  key={pat}
+                  onClick={() => setChromaPattern(pat)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-all cursor-pointer ${
+                    chromaPattern === pat
+                      ? 'bg-gradient-to-r from-cyan-500/30 to-purple-500/30 border border-cyan-400/60 text-cyan-200 shadow-[0_0_15px_rgba(0,242,254,0.35)]'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
+                  }`}
+                >
+                  {pat.charAt(0).toUpperCase() + pat.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
 
